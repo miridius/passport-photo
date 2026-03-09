@@ -96,7 +96,6 @@ describe('drawCutMarks', () => {
 
 		drawCutMarks(ctx, tile, layout.pxPerMm);
 
-		// Top-left horizontal arm width should be 2mm * 10 = 20px
 		const armLengthPx = 2 * layout.pxPerMm;
 		expect(fillRects[0].w).toBe(armLengthPx);
 	});
@@ -131,8 +130,8 @@ describe('drawCutMarks', () => {
 
 		drawCutMarks(ctx, tile, layout.pxPerMm);
 
-		const armLength = 2 * layout.pxPerMm; // 20px
-		const armWidth = 0.5 * layout.pxPerMm; // 5px
+		const armLength = 2 * layout.pxPerMm;
+		const armWidth = 0.5 * layout.pxPerMm;
 
 		// Horizontal arm extends LEFT from tile left edge
 		const h = fillRects[0];
@@ -150,8 +149,8 @@ describe('drawCutMarks', () => {
 
 		drawCutMarks(ctx, tile, layout.pxPerMm);
 
-		const armLength = 2 * layout.pxPerMm; // 20px
-		const armWidth = 0.5 * layout.pxPerMm; // 5px
+		const armLength = 2 * layout.pxPerMm;
+		const armWidth = 0.5 * layout.pxPerMm;
 
 		// Vertical arm extends UP from tile top edge
 		const v = fillRects[1];
@@ -171,8 +170,8 @@ describe('drawCutMarks', () => {
 
 		const armLength = 2 * layout.pxPerMm;
 		const armWidth = 0.5 * layout.pxPerMm;
-		const tileRight = tile.tileX + 36 * layout.pxPerMm;
-		const tileBottom = tile.tileY + 46 * layout.pxPerMm;
+		const tileRight = tile.tileX + Math.round(36 * layout.pxPerMm);
+		const tileBottom = tile.tileY + Math.round(46 * layout.pxPerMm);
 
 		// Bottom-right horizontal arm: index 6 (4th corner, 1st arm)
 		const h = fillRects[6];
@@ -192,8 +191,8 @@ describe('drawCutMarks', () => {
 
 		const armLength = 2 * layout.pxPerMm;
 		const armWidth = 0.5 * layout.pxPerMm;
-		const tileRight = tile.tileX + 36 * layout.pxPerMm;
-		const tileBottom = tile.tileY + 46 * layout.pxPerMm;
+		const tileRight = tile.tileX + Math.round(36 * layout.pxPerMm);
+		const tileBottom = tile.tileY + Math.round(46 * layout.pxPerMm);
 
 		// Bottom-right vertical arm: index 7 (4th corner, 2nd arm)
 		const v = fillRects[7];
@@ -230,9 +229,9 @@ describe('drawCutMarks', () => {
 			drawCutMarks(ctx, tile, layout.pxPerMm);
 
 			const tileLeft = tile.tileX;
-			const tileRight = tile.tileX + 36 * layout.pxPerMm;
+			const tileRight = tile.tileX + Math.round(36 * layout.pxPerMm);
 			const tileTop = tile.tileY;
-			const tileBottom = tile.tileY + 46 * layout.pxPerMm;
+			const tileBottom = tile.tileY + Math.round(46 * layout.pxPerMm);
 
 			for (const rect of fillRects) {
 				// Rect is fully outside tile if any of these hold:
@@ -279,5 +278,30 @@ describe('expandSourceRect', () => {
 		const baseCenterY = base.sy + base.sh / 2;
 		const expandedCenterY = expanded.sy + expanded.sh / 2;
 		expect(expandedCenterY).toBeCloseTo(baseCenterY);
+	});
+
+	it('clamps to image bounds when naturalWidth/naturalHeight provided', () => {
+		// Crop at image left edge — expansion would push sx negative
+		const base = { sx: 0, sy: 50, sw: 350, sh: 450 };
+		const expanded = expandSourceRect(base, 35, 45, 0.5, 1000, 1000);
+
+		expect(expanded.sx).toBe(0); // clamped, not -5
+		expect(expanded.sw).toBeLessThanOrEqual(1000);
+	});
+
+	it('clamps sw to not exceed image width', () => {
+		// Crop near right edge
+		const base = { sx: 650, sy: 50, sw: 350, sh: 450 };
+		const expanded = expandSourceRect(base, 35, 45, 0.5, 1000, 1000);
+
+		expect(expanded.sx + expanded.sw).toBeLessThanOrEqual(1000);
+	});
+
+	it('does not clamp when naturalWidth/naturalHeight are omitted', () => {
+		// Same scenario as clamp test, but without bounds
+		const base = { sx: 0, sy: 50, sw: 350, sh: 450 };
+		const expanded = expandSourceRect(base, 35, 45, 0.5);
+
+		expect(expanded.sx).toBe(-5); // unclamped
 	});
 });

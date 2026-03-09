@@ -4,7 +4,10 @@ import { DEFAULT_CROP, initialZoomFraction } from './crop';
 
 export { DEFAULT_CROP, initialZoomFraction, applyPan, applyZoom } from './crop';
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
 const DEFAULT_IMAGE: ImageState = {
+	loaded: false,
 	element: null,
 	naturalWidth: 0,
 	naturalHeight: 0,
@@ -12,7 +15,7 @@ const DEFAULT_IMAGE: ImageState = {
 };
 
 // Dev-only: HMR state persistence — import.meta.hot.data survives hot module
-// replacement but not full page reloads (which is the desired behavior).
+// replacement but resets on full page reload, so dev can start fresh by refreshing.
 interface HmrData {
 	crop?: CropState;
 	img?: { w: number; h: number; url: string; element: HTMLImageElement };
@@ -24,6 +27,7 @@ export let cropState = $state<CropState>(_hmr?.crop ?? { ...DEFAULT_CROP });
 export let imageState = $state<ImageState>(
 	_hmr?.img
 		? {
+				loaded: true,
 				element: _hmr.img.element,
 				naturalWidth: _hmr.img.w,
 				naturalHeight: _hmr.img.h,
@@ -39,7 +43,7 @@ if (import.meta.hot) {
 			offsetY: cropState.offsetY,
 			zoomFraction: cropState.zoomFraction,
 		};
-		if (imageState.element) {
+		if (imageState.loaded) {
 			data.img = {
 				w: imageState.naturalWidth,
 				h: imageState.naturalHeight,
@@ -54,26 +58,42 @@ if (import.meta.hot) {
  * Load an image from a File, set up imageState and calculate initial crop.
  */
 export async function loadImage(file: File): Promise<void> {
-	const dataUrl = await new Promise<string>((resolve, reject) => {
-		const reader = new FileReader();
-		reader.onload = () => resolve(reader.result as string);
-		reader.onerror = () => reject(new Error('Failed to read image file'));
-		reader.readAsDataURL(file);
-	});
+	if (file.size > MAX_FILE_SIZE) {
+		throw new Error(`Image too large (${Math.round(file.size / 1024 / 1024)}MB). Maximum is 50MB.`);
+	}
+
+	// Revoke previous object URL if any
+	if (imageState.loaded && imageState.url.startsWith('blob:')) {
+		URL.revokeObjectURL(imageState.url);
+	}
+
+	const url = URL.createObjectURL(file);
 
 	const img = new Image();
 	await new Promise<void>((resolve, reject) => {
 		img.onload = () => resolve();
-		img.onerror = () => reject(new Error('Failed to load image'));
-		img.src = dataUrl;
+		img.onerror = () => {
+			URL.revokeObjectURL(url);
+			reject(new Error('Failed to load image. The file may be in an unsupported format. Try converting to JPEG or PNG first.'));
+		};
+		img.src = url;
 	});
 
-	imageState.element = img;
-	imageState.naturalWidth = img.naturalWidth;
-	imageState.naturalHeight = img.naturalHeight;
-	imageState.url = dataUrl;
+	if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+		URL.revokeObjectURL(url);
+		throw new Error('Image has invalid dimensions (0 width or height). The file may be corrupted.');
+	}
 
-	cropState.zoomFraction = initialZoomFraction(img.naturalWidth, img.naturalHeight, AU_PASSPORT_SPEC.aspectRatio);
-	cropState.offsetX = 0;
-	cropState.offsetY = 0;
+	Object.assign(imageState, {
+		loaded: true,
+		element: img,
+		naturalWidth: img.naturalWidth,
+		naturalHeight: img.naturalHeight,
+		url,
+	});
+	Object.assign(cropState, {
+		zoomFraction: initialZoomFraction(img.naturalWidth, img.naturalHeight, AU_PASSPORT_SPEC.aspectRatio),
+		offsetX: 0,
+		offsetY: 0,
+	});
 }

@@ -1,7 +1,6 @@
-import { changeDpiBlob } from 'changedpi';
 import type { CropState } from '$lib/types';
 import { PRINT_SHEET } from '$lib/state/spec';
-import { calculateSourceRect, type SourceRect } from './export';
+import { calculateSourceRect, safeDpiBlob, type SourceRect } from './export';
 
 const {
 	sheetWidthMm: SHEET_WIDTH_MM,
@@ -39,21 +38,29 @@ export interface SheetLayout {
 /**
  * Expand a source rectangle by a fixed mm amount on each side.
  * Used to produce a 36x46mm crop from a 35x45mm one, filling the buffer zone.
+ * When naturalWidth/naturalHeight are provided, clamps to image bounds.
  */
 export function expandSourceRect(
 	base: SourceRect,
 	photoWidthMm: number,
 	photoHeightMm: number,
 	expandMm: number,
+	naturalWidth?: number,
+	naturalHeight?: number,
 ): SourceRect {
 	const srcPxPerMmH = base.sw / photoWidthMm;
 	const srcPxPerMmV = base.sh / photoHeightMm;
-	return {
-		sx: base.sx - expandMm * srcPxPerMmH,
-		sy: base.sy - expandMm * srcPxPerMmV,
-		sw: base.sw + 2 * expandMm * srcPxPerMmH,
-		sh: base.sh + 2 * expandMm * srcPxPerMmV,
-	};
+	let sx = base.sx - expandMm * srcPxPerMmH;
+	let sy = base.sy - expandMm * srcPxPerMmV;
+	let sw = base.sw + 2 * expandMm * srcPxPerMmH;
+	let sh = base.sh + 2 * expandMm * srcPxPerMmV;
+	if (naturalWidth != null && naturalHeight != null) {
+		sx = Math.max(0, sx);
+		sy = Math.max(0, sy);
+		sw = Math.min(sw, naturalWidth - sx);
+		sh = Math.min(sh, naturalHeight - sy);
+	}
+	return { sx, sy, sw, sh };
 }
 
 /**
@@ -109,8 +116,8 @@ export function drawCutMarks(
 
 	ctx.fillStyle = CUT_MARK_COLOR;
 
-	const tileRight = tile.tileX + TILE_WIDTH_MM * pxPerMm;
-	const tileBottom = tile.tileY + TILE_HEIGHT_MM * pxPerMm;
+	const tileRight = tile.tileX + Math.round(TILE_WIDTH_MM * pxPerMm);
+	const tileBottom = tile.tileY + Math.round(TILE_HEIGHT_MM * pxPerMm);
 
 	// Top-left: horizontal arm extends LEFT, vertical arm extends UP
 	ctx.fillRect(tile.tileX - armLength, tile.tileY, armLength, armWidth);
@@ -171,6 +178,8 @@ export async function renderPrintSheet(
 		PHOTO_WIDTH_MM,
 		PHOTO_HEIGHT_MM,
 		INSET_MM,
+		img.naturalWidth,
+		img.naturalHeight,
 	);
 	tempCtx.drawImage(img, sx, sy, sw, sh, 0, 0, tileW, tileH);
 
@@ -216,5 +225,5 @@ export async function renderPrintSheet(
 	);
 
 	// Apply 300 DPI metadata
-	return changeDpiBlob(blob, 300);
+	return safeDpiBlob(blob, 300);
 }

@@ -44,6 +44,19 @@ describe('calculateSourceRect', () => {
 		expect(rect.sh).toBeCloseTo(4000 * (1600 / 1200));
 	});
 
+	it('preserves target aspect ratio in source rect for various inputs', () => {
+		const cases = [
+			{ crop: { offsetX: 0, offsetY: 0, zoomFraction: 1.0 }, nw: 4000, nh: 3000, tw: 413, th: 531 },
+			{ crop: { offsetX: 0.2, offsetY: 0.1, zoomFraction: 0.5 }, nw: 5000, nh: 4000, tw: 1200, th: 1600 },
+			{ crop: { offsetX: 0, offsetY: 0, zoomFraction: 0.3 }, nw: 3000, nh: 6000, tw: 35, th: 45 },
+			{ crop: { offsetX: 0.5, offsetY: 0.5, zoomFraction: 0.1 }, nw: 8000, nh: 6000, tw: 600, th: 800 },
+		];
+		for (const { crop, nw, nh, tw, th } of cases) {
+			const rect = calculateSourceRect(crop, nw, nh, tw, th);
+			expect(rect.sw / rect.sh).toBeCloseTo(tw / th);
+		}
+	});
+
 	it('handles minimum zoom fraction', () => {
 		const rect = calculateSourceRect(
 			{ offsetX: 0, offsetY: 0, zoomFraction: 0.01 },

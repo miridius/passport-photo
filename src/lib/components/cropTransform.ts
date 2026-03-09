@@ -1,16 +1,10 @@
-/**
- * Pure function to compute CSS transform values from normalized crop state.
- * Extracted from CropEditor for testability.
- */
+import type { CropState } from '$lib/types';
 
-export interface TransformInput {
-	offsetX: number;
-	offsetY: number;
-	zoomFraction: number;
+export type TransformInput = CropState & {
 	imageNaturalWidth: number;
 	imageNaturalHeight: number;
 	frameWidth: number;
-}
+};
 
 export interface TransformOutput {
 	scaleFactor: number;

@@ -4,12 +4,9 @@ export interface CropState {
 	zoomFraction: number; // [0.01, 1.0], fraction of source image width that fills crop frame width
 }
 
-export interface ImageState {
-	element: HTMLImageElement | null;
-	naturalWidth: number;
-	naturalHeight: number;
-	url: string;
-}
+export type ImageState =
+	| { loaded: false; element: null; naturalWidth: 0; naturalHeight: 0; url: '' }
+	| { loaded: true; element: HTMLImageElement; naturalWidth: number; naturalHeight: number; url: string };
 
 export interface ExportTarget {
 	widthPx: number;

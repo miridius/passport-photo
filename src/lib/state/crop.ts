@@ -11,7 +11,6 @@ export const DEFAULT_CROP: CropState = {
 
 /**
  * Compute the initial zoomFraction so the image fills the crop frame.
- * Pure function — testable without DOM.
  */
 export function initialZoomFraction(imageWidth: number, imageHeight: number, cropAspect: number): number {
 	const imageAspect = imageWidth / imageHeight;
@@ -22,7 +21,6 @@ export function initialZoomFraction(imageWidth: number, imageHeight: number, cro
  * Apply a pan delta to crop state, clamping to valid bounds.
  * yScale = (imageWidth / imageHeight) / cropAspect — corrects Y-axis clamping
  * for images whose aspect ratio differs from the crop frame.
- * Pure function — returns new state.
  */
 export function applyPan(state: CropState, dxNorm: number, dyNorm: number, yScale: number): CropState {
 	const maxOffsetX = Math.max(0, 1 - state.zoomFraction);
@@ -42,7 +40,6 @@ export function applyPan(state: CropState, dxNorm: number, dyNorm: number, yScal
  * centerXNorm, centerYNorm are 0-1 fractions within the crop frame.
  * yScale = (imageWidth / imageHeight) / cropAspect.
  * factor < 1 = zoom in, factor > 1 = zoom out.
- * Pure function — returns new state.
  */
 export function applyZoom(
 	state: CropState,

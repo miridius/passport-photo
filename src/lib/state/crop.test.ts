@@ -37,7 +37,7 @@ describe('initialZoomFraction', () => {
 		expect(zoom).toBeCloseTo(1.0);
 	});
 
-	it('returns 1.0 for square image (narrower than crop ratio)', () => {
+	it('returns cropAspect for square image (wider than crop ratio)', () => {
 		// Square: imageAspect = 1.0 > cropAspect (0.778), so it is landscape-ish
 		const zoom = initialZoomFraction(3000, 3000, cropAspect);
 		expect(zoom).toBeCloseTo(cropAspect / 1.0);

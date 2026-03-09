@@ -5,7 +5,6 @@ import { describe, it, expect } from 'vitest';
  * The component converts normalized cropState to screen-pixel transforms.
  */
 
-// Extract the transform math as pure functions for testing
 import { computeTransform, keyToAction } from './cropTransform';
 
 describe('computeTransform', () => {
@@ -76,6 +75,20 @@ describe('computeTransform', () => {
 		});
 		// scaleFactor = 350 / (1.0 * 4000) = 0.0875
 		expect(result.scaleFactor).toBeCloseTo(0.0875);
+	});
+
+	it('returns safe defaults when zoomFraction is negative', () => {
+		const result = computeTransform({
+			offsetX: 0.1,
+			offsetY: 0.2,
+			zoomFraction: -0.5,
+			imageNaturalWidth,
+			imageNaturalHeight,
+			frameWidth,
+		});
+		expect(result.scaleFactor).toBe(0);
+		expect(result.panXpx).toBe(0);
+		expect(result.panYpx).toBe(0);
 	});
 
 	it('returns safe defaults when zoomFraction is 0', () => {

@@ -11,14 +11,6 @@ describe('AU_PASSPORT_SPEC', () => {
 		expect(AU_PASSPORT_SPEC.faceHeightMaxFrac).toBe(36 / 45);
 	});
 
-	it('has correct print export dimensions at 300 DPI', () => {
-		expect(AU_PASSPORT_SPEC.printExport.widthPx).toBe(413);
-		expect(AU_PASSPORT_SPEC.printExport.heightPx).toBe(531);
-		expect(AU_PASSPORT_SPEC.printExport.dpi).toBe(300);
-		expect(AU_PASSPORT_SPEC.printExport.format).toBe('jpeg');
-		expect(AU_PASSPORT_SPEC.printExport.quality).toBe(1.0);
-	});
-
 	it('has correct digital export width', () => {
 		expect(AU_PASSPORT_SPEC.digitalExport.widthPx).toBe(1200);
 	});

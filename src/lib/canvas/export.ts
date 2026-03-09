@@ -10,7 +10,6 @@ export interface SourceRect {
 
 /**
  * Calculate the source rectangle in image pixels for a given crop and target.
- * Pure function — no DOM dependency, fully testable.
  */
 export function calculateSourceRect(
 	crop: CropState,
@@ -24,6 +23,29 @@ export function calculateSourceRect(
 	const sw = crop.zoomFraction * naturalWidth;
 	const sh = sw * (targetHeight / targetWidth);
 	return { sx, sy, sw, sh };
+}
+
+const SUPPORTED_DPI_TYPES = new Set(['image/jpeg', 'image/png']);
+const DPI_TIMEOUT_MS = 10_000;
+
+/**
+ * Apply DPI metadata to a blob with type validation and timeout protection.
+ * `changeDpiBlob` silently returns the original blob for unsupported types.
+ */
+export async function safeDpiBlob(blob: Blob, dpi: number): Promise<Blob> {
+	if (!SUPPORTED_DPI_TYPES.has(blob.type)) {
+		throw new Error(`Cannot set DPI on unsupported blob type: ${blob.type}`);
+	}
+	const result = changeDpiBlob(blob, dpi);
+	if (result instanceof Promise) {
+		return Promise.race([
+			result,
+			new Promise<never>((_, reject) =>
+				setTimeout(() => reject(new Error('DPI metadata injection timed out')), DPI_TIMEOUT_MS),
+			),
+		]);
+	}
+	return result;
 }
 
 /**
@@ -63,7 +85,60 @@ export async function exportCrop(
 		),
 	);
 
-	return changeDpiBlob(blob, target.dpi);
+	return safeDpiBlob(blob, target.dpi);
+}
+
+export interface DigitalExportSpec {
+	minSizeBytes: number;
+	maxSizeBytes: number;
+	quality: number;
+}
+
+/**
+ * Digital export with binary search quality auto-adjust.
+ * Starts at max quality. If blob > maxSize, binary search reduces quality.
+ * If blob < minSize at max quality, source is too small — returns error.
+ */
+export async function exportDigitalWithQualitySearch(
+	img: HTMLImageElement,
+	crop: CropState,
+	widthPx: number,
+	heightPx: number,
+	spec: DigitalExportSpec,
+): Promise<{ blob: Blob } | { error: string }> {
+	const baseTarget: ExportTarget = { widthPx, heightPx, dpi: 300, format: 'jpeg', quality: spec.quality };
+	const blob = await exportCrop(img, crop, baseTarget);
+
+	if (blob.size < spec.minSizeBytes) {
+		return { error: `Source image too small for digital submission (minimum ${Math.round(spec.minSizeBytes / 1024)}KB required). Try a higher-resolution photo.` };
+	}
+
+	if (blob.size <= spec.maxSizeBytes) {
+		return { blob };
+	}
+
+	// Too large — binary search on quality
+	let lo = 0.5;
+	let hi = 1.0;
+	let validBlob: Blob | null = null;
+
+	for (let i = 0; i < 8; i++) {
+		const mid = (lo + hi) / 2;
+		const target: ExportTarget = { widthPx, heightPx, dpi: 300, format: 'jpeg', quality: mid };
+		const attempt = await exportCrop(img, crop, target);
+
+		if (attempt.size > spec.maxSizeBytes) {
+			hi = mid;
+		} else {
+			lo = mid;
+			validBlob = attempt;
+		}
+	}
+
+	if (validBlob) {
+		return { blob: validBlob };
+	}
+	return { error: `Could not compress to under ${spec.maxSizeBytes / (1024 * 1024)}MB. Try cropping tighter.` };
 }
 
 /**
@@ -71,11 +146,17 @@ export async function exportCrop(
  */
 export function triggerDownload(blob: Blob, filename: string): void {
 	const url = URL.createObjectURL(blob);
-	const a = document.createElement('a');
-	a.href = url;
-	a.download = filename;
-	document.body.appendChild(a);
-	a.click();
-	document.body.removeChild(a);
-	URL.revokeObjectURL(url);
+	try {
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = filename;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+	} catch (e) {
+		URL.revokeObjectURL(url);
+		throw e;
+	}
+	// Delay revocation so the browser has time to start the download
+	setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

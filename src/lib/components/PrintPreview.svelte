@@ -1,51 +1,44 @@
 <script lang="ts">
 	import { triggerDownload } from '$lib/canvas/export';
 
+	let { blob, loading, onClose }: { blob: Blob | null; loading: boolean; onClose: () => void } = $props();
+
 	let dialogEl: HTMLDialogElement;
 	let previewUrl = $state('');
-	let loading = $state(false);
-	let currentBlob: Blob | null = null;
 
-	export function showLoading() {
-		loading = true;
-		previewUrl = '';
-		currentBlob = null;
-		dialogEl.showModal();
-	}
+	$effect(() => {
+		if (loading || blob) {
+			dialogEl?.showModal();
+		}
+	});
 
-	export function show(blob: Blob) {
-		currentBlob = blob;
-		loading = false;
-		previewUrl = URL.createObjectURL(blob);
-		if (!dialogEl.open) dialogEl.showModal();
-	}
-
-	function close() {
-		dialogEl.close();
-	}
-
-	function handleClose() {
-		if (previewUrl) {
-			URL.revokeObjectURL(previewUrl);
+	$effect(() => {
+		if (blob) {
+			previewUrl = URL.createObjectURL(blob);
+			return () => {
+				URL.revokeObjectURL(previewUrl);
+				previewUrl = '';
+			};
+		} else {
 			previewUrl = '';
 		}
-		currentBlob = null;
-		if (location.hash === '#print-sheet') {
-			history.replaceState(null, '', location.pathname + location.search);
-		}
+	});
+
+	function handleClose() {
+		onClose();
 	}
 
 	function handleBackdropClick(e: MouseEvent) {
 		if (e.target === dialogEl) {
-			close();
+			dialogEl.close();
 		}
 	}
 
 	function download() {
-		if (currentBlob) {
-			triggerDownload(currentBlob, 'passphoto-print-sheet.jpg');
+		if (blob) {
+			triggerDownload(blob, 'passphoto-print-sheet.jpg');
 		}
-		close();
+		dialogEl.close();
 	}
 </script>
 
@@ -59,7 +52,7 @@
 		{/if}
 		<div class="preview-actions">
 			<button class="preview-btn preview-btn--download" disabled={loading} onclick={download}>Download</button>
-			<button class="preview-btn preview-btn--cancel" onclick={close}>Cancel</button>
+			<button class="preview-btn preview-btn--cancel" onclick={() => dialogEl.close()}>Cancel</button>
 		</div>
 	</div>
 </dialog>

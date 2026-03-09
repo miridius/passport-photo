@@ -9,24 +9,17 @@ export const AU_PASSPORT_SPEC = {
 	photoWidthMaxMm: 40,
 	photoHeightMinMm: 45,
 	photoHeightMaxMm: 50,
-	aspectRatio: 35 / 45, // ~0.778 — crop content ratio (used by calculateSourceRect)
+	aspectRatio: 35 / 45,
 
 	// Face size (chin to crown, mm)
 	faceHeightMinMm: 32,
 	faceHeightMaxMm: 36,
 
 	// As fraction of photo height
-	faceHeightMinFrac: 32 / 45, // ~0.711
-	faceHeightMaxFrac: 36 / 45, // ~0.800
+	faceHeightMinFrac: 32 / 45,
+	faceHeightMaxFrac: 36 / 45,
 
 	// Export targets
-	printExport: {
-		widthPx: 413, // 35mm at 300 DPI
-		heightPx: 531, // 45mm at 300 DPI
-		dpi: 300,
-		format: 'jpeg' as const,
-		quality: 1.0,
-	},
 	digitalExport: {
 		widthPx: 1200,
 		dpi: 300,
@@ -50,7 +43,7 @@ export const AU_PASSPORT_SPEC = {
 	},
 } as const;
 
-// Print sheet layout for DM Sofortfoto 9x13cm format
+// Print sheet layout for 9×13cm format (standard instant-print size, e.g. DM Sofortfoto kiosks)
 const PRINT_PHOTO_W = 35;
 const PRINT_PHOTO_H = 45;
 const PRINT_INSET = 0.5;

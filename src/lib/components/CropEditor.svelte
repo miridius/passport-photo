@@ -22,14 +22,16 @@
 	let frameEl: HTMLDivElement | undefined = $state();
 
 	// Aspect ratio correction for Y-axis clamping
+	const ar = AU_PASSPORT_SPEC.aspectRatio;
+
 	const yScale = $derived(
-		imageState.naturalWidth > 0 && imageState.naturalHeight > 0
-			? (imageState.naturalWidth / imageState.naturalHeight) / AU_PASSPORT_SPEC.aspectRatio
+		imageState.loaded
+			? (imageState.naturalWidth / imageState.naturalHeight) / ar
 			: 1,
 	);
 
 	const transform = $derived(
-		imageState.naturalWidth > 0 && frameWidth > 0
+		imageState.loaded && frameWidth > 0
 			? computeTransform({
 					offsetX: cropState.offsetX,
 					offsetY: cropState.offsetY,
@@ -96,6 +98,8 @@
 		<!-- crop frame — the photo viewport -->
 		<div
 			class="crop-frame"
+			style:aspect-ratio="{W} / {H}"
+			style:width="calc(80vh * {ar})"
 			bind:this={frameEl}
 			bind:clientWidth={frameWidth}
 			use:panZoom={{ onPan, onZoom }}
@@ -104,7 +108,7 @@
 			aria-label="Crop editor: arrow keys to pan, +/- to zoom, Shift for precision"
 			onkeydown={onKeydown}
 		>
-			{#if imageState.url}
+			{#if imageState.loaded}
 				<img
 					src={imageState.url}
 					alt="Crop preview"
@@ -138,7 +142,7 @@
 	</div>
 
 	<!-- horizontal ruler — below frame container -->
-	<div class="ruler-h" aria-hidden="true">
+	<div class="ruler-h" style:width="calc(80vh * {ar})" aria-hidden="true">
 		{#each hTicks as mm}
 			<div
 				class="htick"
@@ -176,9 +180,7 @@
 	/* ── crop frame ── */
 	.crop-frame {
 		position: relative;
-		aspect-ratio: 35 / 45;
 		max-height: 80vh;
-		width: calc(80vh * 35 / 45);
 		overflow: hidden;
 		background: #000;
 		outline: none;
@@ -192,6 +194,7 @@
 
 	.crop-image {
 		display: block;
+		max-width: none;
 		user-select: none;
 		-webkit-user-select: none;
 		pointer-events: none;
@@ -241,7 +244,6 @@
 
 	/* ── horizontal ruler (bottom) ── */
 	.ruler-h {
-		width: calc(80vh * 35 / 45);
 		max-width: 100%;
 		height: 1.25rem;
 		position: relative;

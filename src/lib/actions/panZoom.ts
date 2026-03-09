@@ -45,7 +45,7 @@ export function panZoom(node: HTMLElement, callbacks: PanZoomCallbacks) {
 	node.style.touchAction = 'none';
 
 	function onPointerDown(e: PointerEvent) {
-		node.setPointerCapture(e.pointerId);
+		try { node.setPointerCapture(e.pointerId); } catch { return; }
 		pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 	}
 

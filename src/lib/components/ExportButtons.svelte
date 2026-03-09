@@ -1,21 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { exportCrop, triggerDownload } from '$lib/canvas/export';
+	import { exportCrop, exportDigitalWithQualitySearch, triggerDownload } from '$lib/canvas/export';
 	import { calculateSheetLayout, renderPrintSheet } from '$lib/canvas/printSheet';
 	import { cropState, imageState } from '$lib/state/crop.svelte';
 	import { AU_PASSPORT_SPEC } from '$lib/state/spec';
-	import type { ExportTarget } from '$lib/types';
 	import PrintPreview from './PrintPreview.svelte';
 
 	let exporting = $state<'print' | 'digital' | 'sheet' | null>(null);
 	let exportError = $state('');
-	let previewRef: PrintPreview;
+	let sheetBlob = $state<Blob | null>(null);
+	let sheetLoading = $state(false);
 
-	const hasImage = $derived(imageState.element !== null);
+	const hasImage = $derived(imageState.loaded);
 
 	onMount(() => {
 		if (location.hash === '#print-sheet') {
-			if (imageState.element) {
+			if (imageState.loaded) {
 				downloadPrintSheet();
 			} else {
 				history.replaceState(null, '', location.pathname + location.search);
@@ -30,7 +30,7 @@
 	const digitalHeightPx = $derived(Math.round(digitalWidthPx / aspectRatio));
 
 	async function downloadPrint() {
-		if (!imageState.element) return;
+		if (!imageState.loaded) return;
 		exporting = 'print';
 		exportError = '';
 		try {
@@ -46,58 +46,24 @@
 	}
 
 	/**
-	 * EXPD-02: Digital export with binary search quality auto-adjust.
+	 * Digital export with binary search quality auto-adjust.
 	 * Starts at quality 1.0. If blob > 3.5MB, binary search reduces quality.
 	 * If blob < 70KB at quality 1.0, source is too small — block export.
 	 */
 	async function downloadDigital() {
-		if (!imageState.element) return;
+		if (!imageState.loaded) return;
 		exporting = 'digital';
 		exportError = '';
-
 		try {
-			const img = imageState.element;
-			const widthPx = digitalWidthPx;
-			const heightPx = digitalHeightPx;
-			const { minSizeBytes, maxSizeBytes, quality: startQuality } = AU_PASSPORT_SPEC.digitalExport;
-
-			const baseTarget: ExportTarget = { widthPx, heightPx, dpi: 300, format: 'jpeg', quality: startQuality };
-			const blob = await exportCrop(img, cropState, baseTarget);
-
-			// Source too small — block export
-			if (blob.size < minSizeBytes) {
-				exportError = 'Source image too small for digital submission (minimum 70KB required). Try a higher-resolution photo.';
-				return;
-			}
-
-			// Within range — download directly
-			if (blob.size <= maxSizeBytes) {
-				triggerDownload(blob, 'passphoto-digital.jpg');
-				return;
-			}
-
-			// Too large — binary search on quality
-			let lo = 0.5;
-			let hi = 1.0;
-			let validBlob: Blob | null = null;
-
-			for (let i = 0; i < 8; i++) {
-				const mid = (lo + hi) / 2;
-				const target: ExportTarget = { widthPx, heightPx, dpi: 300, format: 'jpeg', quality: mid };
-				const attempt = await exportCrop(img, cropState, target);
-
-				if (attempt.size > maxSizeBytes) {
-					hi = mid;
-				} else {
-					lo = mid;
-					validBlob = attempt;
-				}
-			}
-
-			if (validBlob) {
-				triggerDownload(validBlob, 'passphoto-digital.jpg');
+			const result = await exportDigitalWithQualitySearch(
+				imageState.element, cropState,
+				digitalWidthPx, digitalHeightPx,
+				AU_PASSPORT_SPEC.digitalExport,
+			);
+			if ('error' in result) {
+				exportError = result.error;
 			} else {
-				exportError = 'Could not compress to under 3.5MB. Try cropping tighter.';
+				triggerDownload(result.blob, 'passphoto-digital.jpg');
 			}
 		} catch (e) {
 			exportError = e instanceof Error ? e.message : 'Digital export failed';
@@ -107,19 +73,28 @@
 	}
 
 	async function downloadPrintSheet() {
-		if (!imageState.element) return;
+		if (!imageState.loaded) return;
 		exporting = 'sheet';
 		exportError = '';
-		previewRef?.showLoading();
+		sheetBlob = null;
+		sheetLoading = true;
 		history.replaceState(null, '', '#print-sheet');
 		try {
 			const layout = calculateSheetLayout();
-			const blob = await renderPrintSheet(imageState.element, cropState, layout);
-			previewRef.show(blob);
+			sheetBlob = await renderPrintSheet(imageState.element, cropState, layout);
 		} catch (e) {
 			exportError = e instanceof Error ? e.message : 'Failed to generate print sheet';
 		} finally {
 			exporting = null;
+			sheetLoading = false;
+		}
+	}
+
+	function closePreview() {
+		sheetBlob = null;
+		sheetLoading = false;
+		if (location.hash === '#print-sheet') {
+			history.replaceState(null, '', location.pathname + location.search);
 		}
 	}
 </script>
@@ -151,7 +126,7 @@
 	{/if}
 </div>
 
-<PrintPreview bind:this={previewRef} />
+<PrintPreview blob={sheetBlob} loading={sheetLoading} onClose={closePreview} />
 
 <style>
 	.export-buttons {

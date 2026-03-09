@@ -125,9 +125,6 @@
 		margin: 0.125rem 0;
 	}
 
-	.child-rules p {
-		margin: 0.125rem 0 0;
-	}
 
 	.spec-source {
 		margin: 0.75rem 0 0;
