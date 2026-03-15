@@ -15,7 +15,7 @@ const config = {
 			fallback: 'index.html'
 		}),
 		paths: {
-			base: dev ? '' : '/passphoto'
+			base: dev ? '' : '/passport-photo'
 		},
 		prerender: {
 			handleHttpError: 'warn',

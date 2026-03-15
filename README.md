@@ -2,7 +2,7 @@
 
 Australian passport photo cropping tool. Crop, preview and export photos to Australian passport spec (35x45mm). Guides show correct face position. Works offline — nothing is uploaded.
 
-Deployed at https://miridius.github.io/passphoto/
+Deployed at https://miridius.github.io/passport-photo/
 
 ## Getting Started
 
