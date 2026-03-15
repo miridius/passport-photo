@@ -1,5 +1,5 @@
-import type { CropState } from '$lib/types';
-import { PRINT_SHEET } from '$lib/state/spec';
+import type { CropState } from '../types';
+import { PRINT_SHEET } from '../state/spec';
 import { calculateSourceRect, safeDpiBlob, type SourceRect } from './export';
 
 const {

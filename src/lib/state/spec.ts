@@ -1,4 +1,4 @@
-import type { GuidePosition } from '$lib/types';
+import type { GuidePosition } from '../types';
 
 // Source: https://www.passports.gov.au/help/passport-photos
 export const AU_PASSPORT_SPEC = {

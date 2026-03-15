@@ -1,4 +1,4 @@
-import type { CropState } from '$lib/types';
+import type { CropState } from '../types';
 
 export type TransformInput = CropState & {
 	imageNaturalWidth: number;

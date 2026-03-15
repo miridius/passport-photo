@@ -1,4 +1,4 @@
-import type { CropState, ImageState } from '$lib/types';
+import type { CropState, ImageState } from '../types';
 import { AU_PASSPORT_SPEC } from './spec';
 import { DEFAULT_CROP, initialZoomFraction } from './crop';
 

@@ -1,5 +1,5 @@
 import { changeDpiBlob } from 'changedpi';
-import type { CropState, ExportTarget } from '$lib/types';
+import type { CropState, ExportTarget } from '../types';
 
 export interface SourceRect {
 	sx: number;

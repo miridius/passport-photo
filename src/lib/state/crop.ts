@@ -1,4 +1,4 @@
-import type { CropState } from '$lib/types';
+import type { CropState } from '../types';
 
 // Minimum zoom fraction — prevents zooming in to single-pixel territory
 const MIN_ZOOM_FRACTION = 0.01;

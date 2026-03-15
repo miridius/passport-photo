@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { applyPan, applyZoom, initialZoomFraction, DEFAULT_CROP } from './crop';
-import type { CropState } from '$lib/types';
+import type { CropState } from '../types';
 
 // yScale for a square image at 35:45 crop = (1/1) / (35/45) = 45/35 ≈ 1.286
 const SQUARE_YSCALE = 1 / (35 / 45);
