@@ -16,10 +16,6 @@ const config = {
 		}),
 		paths: {
 			base: dev ? '' : '/passport-photo'
-		},
-		prerender: {
-			handleHttpError: 'warn',
-			handleUnseenRoutes: 'warn'
 		}
 	}
 };
